@@ -5,6 +5,7 @@ import torch
 import random
 from torch.utils.data import Dataset
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class ShapE_Dataset(Dataset):
     def __init__(
@@ -42,7 +43,7 @@ class ShapE_Dataset(Dataset):
         annotation_path = os.path.join(shapepath, "annotation.json")
 
         # load latent and annotation
-        latent = torch.load(latent_path)
+        latent = torch.load(latent_path, map_location=device)
         annotation_json = json.load(open(annotation_path, "r"))
         if f"refind_annotation_{self.refined_ver}" not in annotation_json.keys():
             if self.verbose:
@@ -52,7 +53,7 @@ class ShapE_Dataset(Dataset):
             shape_description = annotation_json[f"refind_annotation_{self.refined_ver}"]
         sample = {"latent": latent, "prompt": shape_description}
         if self.load_gray:
-            gray_latent = torch.load(gray_latent_path)
+            gray_latent = torch.load(gray_latent_path, map_location=device)
             sample["latent_gray"] = gray_latent
 
         return sample

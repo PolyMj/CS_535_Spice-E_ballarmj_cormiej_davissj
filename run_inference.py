@@ -71,7 +71,8 @@ def infer(args, device):
     model = load_model('text300M', device=device)
     model.wrapped.backbone.make_ctrl_layers()
     model.wrapped.set_up_controlnet_cond()
-    model.load_state_dict(torch.load(model_path))
+    print(model.device)
+    model.load_state_dict(torch.load(model_path, map_location=device))
     diffusion = diffusion_from_config(load_config('diffusion'))
 
     # create output dir if it doesn't exist
@@ -90,7 +91,7 @@ def infer(args, device):
         guidance_shape = xm.encoder.encode_to_bottleneck(batch)      
 
     else:
-        guidance_shape = torch.load(data_path)
+        guidance_shape = torch.load(data_path, map_location=device)
 
     with torch.no_grad():        
         filename = prompt2filename(prompt)

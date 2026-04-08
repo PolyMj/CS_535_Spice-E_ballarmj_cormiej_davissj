@@ -8,6 +8,8 @@ from shap_e.models.download import load_model
 from shap_e.util.notebooks import create_pan_cameras, decode_latent_images, decode_latent_mesh
 from blender_rendering import good_looking_render
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-d1', '--data_path_1', type=str, 
                     help='path to data', required=True)
@@ -44,8 +46,8 @@ def infer(args, device):
     os.makedirs(output_dir, exist_ok=True)   
 
     # load latent and add noise to it
-    input_latent1 = torch.load(data_path1)
-    input_latent2 = torch.load(data_path2)
+    input_latent1 = torch.load(data_path1, map_location=device)
+    input_latent2 = torch.load(data_path2, map_location=device)
     blended_latent = input_latent1 * (1 - blend_scale) + blend_scale * input_latent2.clone()
     input_latent1 = input_latent1.view(1024, 1024)
     blended_latent = blended_latent.view(1024, 1024)

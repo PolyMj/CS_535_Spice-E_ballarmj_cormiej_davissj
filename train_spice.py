@@ -91,7 +91,7 @@ def train_controlnet(args):
     first_epoch = 0
     if os.path.exists(os.path.join(output_path, 'model_final.pt')):
         print("loading model from output folder")
-        model.load_state_dict(torch.load(os.path.join(output_path, 'model_final.pt')))
+        model.load_state_dict(torch.load(os.path.join(output_path, 'model_final.pt'), map_location=device))
         # get last epoch by looking at file prefixes
         render_path = os.path.join(output_path, 'rendered_samples')
         first_epoch = max([int(f.split('_')[0]) for f in os.listdir(render_path) if f.endswith('.mp4')])

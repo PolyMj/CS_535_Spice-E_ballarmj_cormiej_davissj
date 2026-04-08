@@ -10,3 +10,9 @@ render_blended.sh
 render_noisy.sh
 *.blend
 trained_models/
+
+# Local blender install
+blender*
+
+# Downloaded / Created Examples
+example_data
