@@ -106,13 +106,20 @@ def main():
         "clip_dir": round(direction, 4)
     }
 
-    with open(args.output_json, "w") as f:
+    if os.path.dirname(args.output_json):
+        output_path = args.output_json
+    else:
+        output_path = os.path.join("metrics", args.output_json)
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    
+    with open(output_path, "w") as f:
         json.dump(results, indent=4, fp=f)
     
     print(f"--- Results ---")
     print(f"CLIP-Sim: {sim:.4f}")
     print(f"CLIP-Dir: {direction:.4f}")
-    print(f"Saved to {args.output_json}")
+    print(f"Saved to: metrics/{args.output_json}")
 
 if __name__ == "__main__":
     main()
