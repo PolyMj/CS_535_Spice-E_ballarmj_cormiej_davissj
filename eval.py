@@ -1,0 +1,111 @@
+import torch
+import clip
+from PIL import Image
+import json
+import argparse
+import os
+from torchvision.transforms import ToPILImage
+
+def load_clip_model(device):
+    model, preprocess = clip.load("ViT-L/14", device=device)
+    return model, preprocess
+
+@torch.no_grad()
+def compute_metrics(image_paths, prompt, target_image_path, model, preprocess, device):
+    # 1. Encode Text
+    text_tokens = clip.tokenize([prompt]).to(device)
+    text_features = model.encode_text(text_tokens)
+    text_features /= text_features.norm(dim=-1, keepdim=True)
+
+    # 2. Encode Rendered Images (Generated Outputs)
+    image_features_list = []
+    for img_path in image_paths:
+        image = preprocess(Image.open(img_path)).unsqueeze(0).to(device)
+        img_feat = model.encode_image(image)
+        img_feat /= img_feat.norm(dim=-1, keepdim=True)
+        image_features_list.append(img_feat)
+    
+    avg_image_features = torch.cat(image_features_list, dim=0).mean(dim=0, keepdim=True)
+    avg_image_features /= avg_image_features.norm(dim=-1, keepdim=True)
+
+    # CLIP-Sim calculation
+    clip_sim = torch.cosine_similarity(avg_image_features, text_features).item()
+
+    # 3. CLIP-Dir calculation
+    clip_dir = 0.0
+    if target_image_path and os.path.exists(target_image_path):
+        if target_image_path.lower().endswith('.pt'):
+            # Load the checkpoint/latent
+            data = torch.load(target_image_path, map_location=device)
+            
+            # Handle OrderedDict / Dict structure
+            if isinstance(data, dict):
+                # Try common Spice-E keys, fallback to first available tensor
+                src_tensor = data.get('latent') or data.get('image') or next(iter(data.values()))
+            else:
+                src_tensor = data
+
+            # If it's a raw image tensor [C, H, W], we must encode it
+            if src_tensor.ndim == 3 or (src_tensor.ndim == 4 and src_tensor.shape[1] == 3):
+                src_pil = ToPILImage()(src_tensor.squeeze().cpu())
+                src_feat = model.encode_image(preprocess(src_pil).unsqueeze(0).to(device))
+            else:
+                # Assume it's already an embedding
+                src_feat = src_tensor
+        else:
+            # Standard image file
+            src_image = preprocess(Image.open(target_image_path)).unsqueeze(0).to(device)
+            src_feat = model.encode_image(src_image)
+
+        # Ensure embedding is 2D [1, D] and normalized
+        src_feat = src_feat.view(1, -1).float()
+        src_feat /= src_feat.norm(dim=-1, keepdim=True)
+
+        # Dimension Check before subtraction
+        if src_feat.shape[1] == avg_image_features.shape[1]:
+            dir_image = avg_image_features - src_feat
+            dir_text = text_features 
+            clip_dir = torch.cosine_similarity(dir_image, dir_text).item()
+        else:
+            print(f"Error: Dimension mismatch. Source: {src_feat.shape[1]}, Generated: {avg_image_features.shape[1]}")
+            clip_dir = 0.0
+
+    return clip_sim, clip_dir
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--images_dir", required=True, help="Path to rendered images")
+    parser.add_argument("-p", "--prompt", required=True, help="The text prompt")
+    parser.add_argument("-s", "--source_image", help="Source .pt or image file for CLIP-Dir")
+    parser.add_argument("-o", "--output_json", default="metrics.json")
+    args = parser.parse_args()
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = load_clip_model(device)
+
+    img_extensions = ('.png', '.jpg', '.jpeg')
+    image_files = [os.path.join(args.images_dir, f) for f in os.listdir(args.images_dir) 
+                   if f.lower().endswith(img_extensions)]
+
+    if not image_files:
+        print(f"No images found in {args.images_dir}")
+        return
+
+    sim, direction = compute_metrics(image_files, args.prompt, args.source_image, model, preprocess, device)
+
+    results = {
+        "prompt": args.prompt,
+        "clip_sim": sim,
+        "clip_dir": direction
+    }
+
+    with open(args.output_json, "w") as f:
+        json.dump(results, indent=4, fp=f)
+    
+    print(f"--- Results ---")
+    print(f"CLIP-Sim: {sim:.4f}")
+    print(f"CLIP-Dir: {direction:.4f}")
+    print(f"Saved to {args.output_json}")
+
+if __name__ == "__main__":
+    main()
