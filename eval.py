@@ -35,27 +35,34 @@ def compute_metrics(image_paths, prompt, target_image_path, model, preprocess, d
     clip_dir = 0.0
     if target_image_path and os.path.exists(target_image_path):
         if target_image_path.lower().endswith('.pt'):
-            # Load the checkpoint/latent
             data = torch.load(target_image_path, map_location=device)
             
-            # Handle OrderedDict / Dict structure
             if isinstance(data, dict):
-                # Try common Spice-E keys, fallback to first available tensor
                 src_tensor = data.get('latent') or data.get('image') or next(iter(data.values()))
             else:
                 src_tensor = data
 
-            # If it's a raw image tensor [C, H, W], we must encode it
-            if src_tensor.ndim == 3 or (src_tensor.ndim == 4 and src_tensor.shape[1] == 3):
-                src_pil = ToPILImage()(src_tensor.squeeze().cpu())
+            # Fix: Handle the 1024*1024 flattened spatial tensor
+            if src_tensor.numel() == 1048576:
+                # Reshape to [1, 1024, 1024] or [1024, 1024]
+                src_tensor = src_tensor.view(1024, 1024)
+                
+                # Convert to a format CLIP can preprocess (PIL Image)
+                # We normalize to 0-255 if it's not already
+                if src_tensor.max() <= 1.0:
+                    src_tensor = src_tensor * 255
+                
+                src_pil = ToPILImage()(src_tensor.byte().cpu())
+                
+                # Now ENCODE it to get the 768 dimension
                 src_feat = model.encode_image(preprocess(src_pil).unsqueeze(0).to(device))
-            else:
-                # Assume it's already an embedding
+            
+            elif src_tensor.shape[-1] == 768:
+                # It's already an embedding
                 src_feat = src_tensor
-        else:
-            # Standard image file
-            src_image = preprocess(Image.open(target_image_path)).unsqueeze(0).to(device)
-            src_feat = model.encode_image(src_image)
+            else:
+                # Fallback for other shapes
+                src_feat = src_tensor
 
         # Ensure embedding is 2D [1, D] and normalized
         src_feat = src_feat.view(1, -1).float()
