@@ -102,8 +102,8 @@ def main():
 
     results = {
         "prompt": args.prompt,
-        "clip_sim": sim,
-        "clip_dir": direction
+        "clip_sim": round(sim, 4),
+        "clip_dir": round(direction, 4)
     }
 
     with open(args.output_json, "w") as f:
