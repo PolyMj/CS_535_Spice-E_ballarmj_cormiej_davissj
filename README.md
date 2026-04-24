@@ -13,6 +13,10 @@ pip install -e .
 ### Modifications:
 
 ### Run:
+#### Eval:
+```
+python eval.py --images_dir <path_to_output_directory> --promt <promt_used_during_run> --source_image <path_to_original_pt_model> --output_json metrics/<promt>_metrics.json
+```
 
 # Spice·E: Structural Priors in 3D Diffusion using Cross-Entity Attention
 
