@@ -44,7 +44,8 @@ alternative methods. Importantly, this is accomplished without tailoring our app
 </br>
 
 ## Setting up environment
-    conda create --name Spice-E python=3.10 --yes
+    # Original: python=3.10, but this cause issues with installing bpy
+    conda create --name Spice-E python=3.11 --yes
     conda activate Spice-E
     pip install -e .
 
