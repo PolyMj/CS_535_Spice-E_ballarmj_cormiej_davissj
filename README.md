@@ -1,3 +1,19 @@
+# This is a fork created for a CS 535 class project at SUNY Polytechnic
+## Authors: Michael Ballard Jacob Cormier Sawyer Davis
+
+### Setup:
+```
+git clone https://github.com/PolyMj/CS_535_Spice-E_ballarmj_cormiej_davissj.git
+cd CS_535_Spice-E_ballarmj_cormiej_davissj
+conda create --name Spice-E python=3.11 --yes
+conda activate Spice-E
+pip install -e .
+```
+
+### Modifications:
+
+### Run:
+
 # Spice·E: Structural Priors in 3D Diffusion using Cross-Entity Attention
 
 This is the official pytorch implementation of Spice·E.
