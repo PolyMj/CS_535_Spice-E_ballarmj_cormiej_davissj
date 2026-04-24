@@ -1,4 +1,6 @@
 import argparse
+import json
+import time
 import torch
 import os
 import cv2
@@ -8,7 +10,17 @@ from shap_e.diffusion.gaussian_diffusion import diffusion_from_config
 from shap_e.models.download import load_model, load_config
 from shap_e.util.notebooks import create_pan_cameras, decode_latent_images, decode_latent_mesh
 from shap_e.util.data_util import load_or_create_multimodal_batch
-from visualizations.blender_rendering import good_looking_render
+
+
+def _get_blender_renderer():
+    try:
+        from visualizations.blender_rendering import good_looking_render
+    except ImportError as exc:
+        raise ImportError(
+            "Blender rendering dependencies are not installed. "
+            "Install them with: pip install -e .[blender]"
+        ) from exc
+    return good_looking_render
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_path', type=str, 
@@ -37,6 +49,12 @@ parser.add_argument('--verbose_blender', action='store_true', default=False,
                     help='if enabled, prints outputs from blender script')
 parser.add_argument('--render_blender', action='store_true', default=False,
                     help='if enabled, prints outputs from blender script')
+parser.add_argument('--karras_steps', type=int, default=32,
+                    help='sampling steps for latent diffusion (lower is faster)')
+parser.add_argument('--num_frames', type=int, default=20,
+                    help='number of frames to render for output video')
+parser.add_argument('--seed', type=int, default=0,
+                    help='random seed for reproducible inference')
 
 
 def prompt2filename(prompt: str):
@@ -65,6 +83,15 @@ def infer(args, device):
     mv_image_size = args.mv_image_size
     verbose_blender = args.verbose_blender
     render_in_blender = args.render_blender
+    karras_steps = args.karras_steps
+    num_frames = args.num_frames
+    seed = args.seed
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
     cameras = create_pan_cameras(output_resolution, device)
 
     xm = load_model('transmitter', device=device)
@@ -101,19 +128,43 @@ def infer(args, device):
 
         # Rendering Model Output
         print(f"rendering samples for prompt: {prompt}")
+        run_start = time.perf_counter()
         test_model(model=model,
-                diffusion=diffusion, 
+                diffusion=diffusion,
                 xm=xm,
                 output_folder=output_path,
                 cond=guidance_shape[0].to(device).detach(),
-                epoch=0, 
+                epoch=0,
                 prompt=prompt,
                 device=device,
                 guidance_scale=guidance_scale,
                 render_mode=render_mode,
                 size=output_resolution,
+                karras_steps=karras_steps,
+                num_frames=num_frames,
                 save_mesh=True)
+        run_seconds = time.perf_counter() - run_start
+
+        metrics_path = os.path.join(output_path, "output", "metrics.json")
+        with open(metrics_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "prompt": prompt,
+                    "guidance_scale": guidance_scale,
+                    "karras_steps": karras_steps,
+                    "num_frames": num_frames,
+                    "output_resolution": output_resolution,
+                    "seed": seed,
+                    "device": str(device),
+                    "runtime_seconds": round(run_seconds, 4),
+                },
+                f,
+                indent=2,
+            )
+        print(f"Saved run metrics to: {metrics_path}")
+
         if render_in_blender:
+            good_looking_render = _get_blender_renderer()
             mesh_path = os.path.join(output_path, "output/output.ply")
             blender_img_path = os.path.join(output_path, "output/blender_output.png")
             good_looking_render(mesh_path, blender_img_path, plastic=False)
