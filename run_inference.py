@@ -88,7 +88,10 @@ def infer(args, device):
             cache_dir=os.path.join(data_path, "cached_guidance"),
             verbose=verbose_blender,) # this will show Blender output during renders
         print("Encoding")
-        guidance_shape = xm.encoder.encode_to_bottleneck(batch)      
+        guidance_shape = xm.encoder.encode_to_bottleneck(batch)
+
+        name = os.path.basename(input_guidance_object_path)
+        torch.save(guidance_shape.to("cpu"), data_path+name[0:-4]+".pt")
 
     else:
         guidance_shape = torch.load(data_path, map_location=device)

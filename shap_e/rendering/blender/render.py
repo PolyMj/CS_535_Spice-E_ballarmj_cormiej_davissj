@@ -39,7 +39,8 @@ def render_model(
         args = []
         if platform.system() == "Linux":
             # Needed to enable Eevee backend on headless linux.
-            args = ["xvfb-run", "-a"]
+            args = ["LIBGL_ALWAYS_SOFTWARE=1", "xvfb-run", "-a"] # Force use of LibGL with blender-render
+            # args = ["xvfb-run", "-a"]
         args.extend(
             [
                 _blender_binary_path(),

@@ -5,13 +5,27 @@ import json
 import argparse
 import os
 from torchvision.transforms import ToPILImage
+import point_cloud_utils as pcu # `pip install point-cloud-utils`
 
 def load_clip_model(device):
     model, preprocess = clip.load("ViT-L/14", device=device)
     return model, preprocess
 
+def compute_geodiff(guidance_pc_path, output_pc_path):
+    if (not os.path.exists(guidance_pc_path)):
+        print(f"ERROR: Guidance model not found: {guidance_pc_path}")
+        return None
+    if (not os.path.exists(output_pc_path)):
+        print(f"ERROR: Guidance model not found: {output_pc_path}")
+        return None
+    
+    gpc = pcu.load_mesh_v(guidance_pc_path)
+    opc = pcu.load_mesh_v(output_pc_path)
+
+    return float(pcu.chamfer_distance(gpc, opc)) * 10e-2 # GD scaled by 10^-2 as specified in the paper
+
 @torch.no_grad()
-def compute_metrics(image_paths, prompt, target_image_path, model, preprocess, device):
+def compute_clip_metrics(image_paths, prompt, target_image_path, model, preprocess, device):
     # 1. Encode Text
     text_tokens = clip.tokenize([prompt]).to(device)
     text_features = model.encode_text(text_tokens)
@@ -79,47 +93,63 @@ def compute_metrics(image_paths, prompt, target_image_path, model, preprocess, d
 
     return clip_sim, clip_dir
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--images_dir", required=True, help="Path to rendered images")
-    parser.add_argument("-p", "--prompt", required=True, help="The text prompt")
-    parser.add_argument("-s", "--source_image", help="Source .pt or image file for CLIP-Dir")
-    parser.add_argument("-o", "--output_json", default="metrics.json")
-    args = parser.parse_args()
 
+def create_metrics(images_dir:str, prompt:str, guidance:str, result:str, source_image:str, output_json:str):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, preprocess = load_clip_model(device)
 
     img_extensions = ('.png', '.jpg', '.jpeg')
-    image_files = [os.path.join(args.images_dir, f) for f in os.listdir(args.images_dir) 
+    image_files = [os.path.join(images_dir, f) for f in os.listdir(images_dir) 
                    if f.lower().endswith(img_extensions)]
 
     if not image_files:
-        print(f"No images found in {args.images_dir}")
+        print(f"No images found in {images_dir}")
         return
 
-    sim, direction = compute_metrics(image_files, args.prompt, args.source_image, model, preprocess, device)
+    sim, direction = compute_clip_metrics(image_files, prompt, source_image, model, preprocess, device)
+
+    # Geometric difference
+    gd = None
+    if (guidance is not None and result is not None):
+        gd = compute_geodiff(guidance, result)
 
     results = {
-        "prompt": args.prompt,
+        "guidance": os.path.basename(guidance),
+        "prompt": prompt,
         "clip_sim": round(sim, 4),
-        "clip_dir": round(direction, 4)
+        "clip_dir": round(direction, 4),
+        "geometric_difference": round(gd, 4) if gd is not None else "N/A"
     }
 
-    if os.path.dirname(args.output_json):
-        output_path = args.output_json
+    if os.path.dirname(output_json):
+        output_path = output_json
     else:
-        output_path = os.path.join("metrics", args.output_json)
+        output_path = os.path.join("metrics", output_json)
 
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    
-    with open(output_path, "w") as f:
-        json.dump(results, indent=4, fp=f)
     
     print(f"--- Results ---")
     print(f"CLIP-Sim: {sim:.4f}")
     print(f"CLIP-Dir: {direction:.4f}")
-    print(f"Saved to: metrics/{args.output_json}")
+    print(f"GD:       {gd:.4f}")
+    
+    with open(output_path, "w") as f:
+        json.dump(results, indent=4, fp=f)
+    
+    print(f"Saved to: metrics/{output_json}")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--images_dir", required=True, help="Path to rendered images")
+    parser.add_argument("-p", "--prompt", required=True, help="The text prompt")
+    parser.add_argument("-g", "--guidance", required=False, help="The model used for guidance")
+    parser.add_argument("-r", "--result", required=False, help="The model produced as output")
+    parser.add_argument("-s", "--source_image", help="Source .pt or image file for CLIP-Dir")
+    parser.add_argument("-o", "--output_json", default="metrics.json")
+    args = parser.parse_args()
+
+    create_metrics(args.images_dir, args.prompt, args.guidance, args.result, args.source_image, args.output_json)
 
 if __name__ == "__main__":
     main()
