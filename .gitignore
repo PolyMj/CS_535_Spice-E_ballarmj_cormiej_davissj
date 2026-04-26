@@ -1,5 +1,4 @@
 data_for_website/
-outputs/
 guidance_latents_etai/
 shap_e_model_cache/
 shap_e.egg-info/
