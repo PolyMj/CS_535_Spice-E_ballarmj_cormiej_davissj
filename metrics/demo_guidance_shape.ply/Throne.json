@@ -1,0 +1,7 @@
+{
+    "guidance": "demo_guidance_shape.ply",
+    "prompt": "Throne",
+    "clip_sim": 0.2194,
+    "clip_dir": 0.0827,
+    "geometric_difference": 0.0567
+}

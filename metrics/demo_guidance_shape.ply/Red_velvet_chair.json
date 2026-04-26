@@ -1,0 +1,7 @@
+{
+    "guidance": "demo_guidance_shape.ply",
+    "prompt": "Red_velvet_chair",
+    "clip_sim": 0.2639,
+    "clip_dir": 0.1036,
+    "geometric_difference": 0.0558
+}

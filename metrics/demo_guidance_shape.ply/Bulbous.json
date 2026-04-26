@@ -1,0 +1,7 @@
+{
+    "guidance": "demo_guidance_shape.ply",
+    "prompt": "Bulbous",
+    "clip_sim": 0.2037,
+    "clip_dir": 0.0669,
+    "geometric_difference": 0.0558
+}

@@ -1,0 +1,7 @@
+{
+    "guidance": "Bench.ply",
+    "prompt": "Bulbous",
+    "clip_sim": 0.1648,
+    "clip_dir": 0.0249,
+    "geometric_difference": 0.0524
+}

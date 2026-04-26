@@ -1,0 +1,7 @@
+{
+    "guidance": "Bench.ply",
+    "prompt": "Red_velvet_bench",
+    "clip_sim": 0.2544,
+    "clip_dir": 0.0876,
+    "geometric_difference": 0.0447
+}

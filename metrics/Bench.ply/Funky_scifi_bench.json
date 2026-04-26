@@ -1,0 +1,7 @@
+{
+    "guidance": "Bench.ply",
+    "prompt": "Funky_scifi_bench",
+    "clip_sim": 0.2384,
+    "clip_dir": 0.068,
+    "geometric_difference": 0.0593
+}

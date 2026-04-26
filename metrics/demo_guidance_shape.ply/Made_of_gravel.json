@@ -1,7 +1,7 @@
 {
     "guidance": "demo_guidance_shape.ply",
     "prompt": "Made_of_gravel",
-    "clip_sim": 0.2031,
-    "clip_dir": 0.0237,
-    "geometric_difference": 0.0663
+    "clip_sim": 0.2103,
+    "clip_dir": 0.0392,
+    "geometric_difference": 0.054
 }
