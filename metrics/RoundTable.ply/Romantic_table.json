@@ -1,0 +1,7 @@
+{
+    "guidance": "RoundTable.ply",
+    "prompt": "Romantic_table",
+    "clip_sim": 0.1923,
+    "clip_dir": 0.049,
+    "geometric_difference": 0.0375
+}

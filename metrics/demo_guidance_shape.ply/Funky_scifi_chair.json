@@ -1,0 +1,7 @@
+{
+    "guidance": "demo_guidance_shape.ply",
+    "prompt": "Funky_scifi_chair",
+    "clip_sim": 0.2487,
+    "clip_dir": 0.0874,
+    "geometric_difference": 0.0573
+}
