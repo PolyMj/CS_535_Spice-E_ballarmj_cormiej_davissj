@@ -20,7 +20,9 @@ def test_model(model,
                size=160,
                return_latents=False,
                seen_sample=False,
-               save_mesh=False, 
+               save_mesh=False,
+               karras_steps=32,
+               num_frames=20,
                ):
     # make output folder if it doesn't exist
     render_path = os.path.join(output_folder, 'output')
@@ -41,7 +43,7 @@ def test_model(model,
         clip_denoised=True,
         use_fp16=True,
         use_karras=True,
-        karras_steps=64,
+        karras_steps=karras_steps,
         sigma_min=1e-3,
         sigma_max=160,
         s_churn=0,
@@ -51,7 +53,7 @@ def test_model(model,
         return latents
 
     # visualize examples
-    cameras = create_pan_cameras(size, device)
+    cameras = create_pan_cameras(size, device, num_frames=num_frames)
     filename = prompt.replace(' ', '_')
     for _, latent in enumerate(latents):
         images = decode_latent_images(xm, latent, cameras, rendering_mode=render_mode)
