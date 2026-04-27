@@ -1,7 +1,23 @@
 # This is a fork created for a CS 535 class project at SUNY Polytechnic
 ## Authors: Michael Ballard Jacob Cormier Sawyer Davis
 
-### Setup:
+## Modifications  
+
+### Refactoring for CPU-Only Inference
+Specified the deivice in various calls to torch.load() and similar torch functions to allow the program to run properly without a GPU.  
+
+### Latent Encoding Autosave
+Upon inferrence using geometry (rather than encoded latents), SpiceE will encode the geometry into a latent, then use that for inferrence. A small modificaiton was made to automatically save that latent for later use instead.  
+
+### Low-cost Inference  
+Added parameters to run_inferrence.py for adjusting the number of karras diffusion steps, number of frames rendered, and a seed.  
+
+### Evaluation Scripts
+Added eval.py, which computes Clip_{sim}, Clip_{dir}, and Geometric Difference from the output of inferrence, and writes these measuremesnts to a json file.  
+Added eval_from_folder.py, calls functions from eval.py, but computes the correct paths for most of the parameters to simplify evaluation slightly.  
+
+
+## Setup:
 ```
 git clone https://github.com/PolyMj/CS_535_Spice-E_ballarmj_cormiej_davissj.git
 cd CS_535_Spice-E_ballarmj_cormiej_davissj
@@ -10,12 +26,27 @@ conda activate Spice-E
 pip install -e .
 ```
 
-### Modifications:
 
-### Run:
-#### Eval:
+## Running Expiriments
+
+All the trained models used in the original paper can be downloaded from [here](https://drive.google.com/drive/folders/1CxUk7BVvjPuTP5p2IMvwfjjG3s7hm2kS?usp=sharing) 
+
+### Low-Cost Inferrence
+With SpiceE encoded latent for guidance:
 ```
-python eval.py --images_dir <path_to_output_directory> --promt <promt_used_during_run> --source_image <path_to_original_pt_model> --output_json metrics/<promt>_metrics.json
+python3 run_inference.py -m <path to model> -d <path to the guidance shape latent> -o <path to output folder> -p <text prompt> --karras_steps <num_steps> -num_frames <num_frames> --seed <seed>
+```
+With .ply model for guidance:
+```
+python3 run_inference.py -m <path to model> -d <path to folder in which to save the encoded guidance shape latent> -o <path to output folder> -p <text prompt> --encode_guidance --input_guidance_object_path <path to input 3D guidance shape> --karras_steps <num_steps> -num_frames <num_frames> --seed <seed>
+```
+
+### Additional Models
+Use the above command using the models in "experimental_data/guidance/" or the .pt files in "outputs/latents/" as appropriate. 
+
+### Evaluation:
+```
+python3 eval.py --images_dir <path_to_output_directory> --promt <promt_used_during_run> --source_image <path_to_original_pt_model> --output_json metrics/<promt>_metrics.json --guidance <path_to_guidance_model> --result <path_to_output_model>
 ```
 
 # Spice·E: Structural Priors in 3D Diffusion using Cross-Entity Attention
